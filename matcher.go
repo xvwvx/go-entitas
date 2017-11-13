@@ -14,11 +14,9 @@ const (
 	arrayHashFactor          = 673
 )
 
-type MatcherHash uint
-
 type Matcher interface {
 	Matches(entity Entity) bool
-	Hash() MatcherHash
+	Hash() uint
 	Types() []Type
 	Equals(m Matcher) bool
 	String() string
@@ -27,7 +25,7 @@ type Matcher interface {
 // BaseMatcher
 type BaseMatcher struct {
 	types []Type
-	hash  MatcherHash
+	hash  uint
 }
 
 func newBaseMatcher(types ...Type) BaseMatcher {
@@ -45,7 +43,7 @@ func newBaseMatcher(types ...Type) BaseMatcher {
 	return BaseMatcher{types: types}
 }
 
-func (b *BaseMatcher) Hash() MatcherHash {
+func (b *BaseMatcher) Hash() uint {
 	return b.hash
 }
 
@@ -115,25 +113,25 @@ func (n *NoneMatcher) String() string {
 }
 
 // Utilities
-func Hash(factor uint, types ...Type) MatcherHash {
+func Hash(factor uint, types ...Type) uint {
 	var hash uint
 	for _, t := range types {
 		hash ^= uint(t) * componentHashFactor
 	}
 	hash ^= uint(len(types)) * factor
-	return MatcherHash(hash)
+	return uint(hash)
 }
 
-func HashMatcher(matchers ...Matcher) MatcherHash {
+func HashMatcher(matchers ...Matcher) uint {
 	if len(matchers) == 1 {
 		return matchers[0].Hash()
 	}
 
-	hash := MatcherHash(0)
+	hash := uint(0)
 	for _, m := range matchers {
 		hash ^= m.Hash()
 	}
-	hash ^= MatcherHash(len(matchers)) * arrayHashFactor
+	hash ^= uint(len(matchers)) * arrayHashFactor
 	return hash
 }
 

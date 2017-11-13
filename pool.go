@@ -42,7 +42,7 @@ type pool struct {
 	entitiesCache       []Entity
 	unused      []Entity
 
-	groups      map[MatcherHash]Group
+	groups      map[uint]Group
 	groupsIndex map[Type][]Group
 
 	cacheComponents  [][]Component
@@ -59,7 +59,7 @@ func NewPool(index uint64) Pool {
 	return &pool{
 		index:            index,
 		entities:         make(map[uint64]Entity),
-		groups:           make(map[MatcherHash]Group),
+		groups:           make(map[uint]Group),
 		groupsIndex:      make(map[Type][]Group),
 		unused:           make([]Entity, 0),
 		cacheComponents:  make([][]Component, TotalComponents),
