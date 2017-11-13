@@ -17,103 +17,103 @@ const (
 type Matcher interface {
 	Matches(entity Entity) bool
 	Hash() uint
-	Types() []Type
+	ComponentTypes() []ComponentType
 	Equals(m Matcher) bool
 	String() string
 }
 
-// BaseMatcher
-type BaseMatcher struct {
-	types []Type
+// baseMatcher
+type baseMatcher struct {
+	types []ComponentType
 	hash  uint
 }
 
-func newBaseMatcher(types ...Type) BaseMatcher {
-	mtype := make(map[Type]bool)
+func newBaseMatcher(types ...ComponentType) baseMatcher {
+	mtype := make(map[ComponentType]bool)
 	for _, t := range types {
 		mtype[t] = true
 	}
 
-	types = make([]Type, 0, len(mtype))
+	types = make([]ComponentType, 0, len(mtype))
 	for t := range mtype {
 		types = append(types, t)
 	}
-	sort.Sort(Types(types))
+	sort.Sort(ComponentTypes(types))
 
-	return BaseMatcher{types: types}
+	return baseMatcher{types: types}
 }
 
-func (b *BaseMatcher) Hash() uint {
+func (b *baseMatcher) Hash() uint {
 	return b.hash
 }
 
-func (b *BaseMatcher) Types() []Type {
+func (b *baseMatcher) ComponentTypes() []ComponentType {
 	return b.types
 }
 
-func (a *BaseMatcher) Equals(m Matcher) bool {
-	return reflect.DeepEqual(a.Types(), m.Types())
+func (a *baseMatcher) Equals(m Matcher) bool {
+	return reflect.DeepEqual(a.ComponentTypes(), m.ComponentTypes())
 }
 
 // AllOf
 type AllMatcher struct {
-	BaseMatcher
+	baseMatcher
 }
 
-func AllOf(types ...Type) Matcher {
+func AllOf(types ...ComponentType) Matcher {
 	b := newBaseMatcher(types...)
-	b.hash = Hash(allHashFactor, b.Types()...)
+	b.hash = Hash(allHashFactor, b.ComponentTypes()...)
 	return &AllMatcher{b}
 }
 
 func (a *AllMatcher) Matches(e Entity) bool {
-	return e.HasComponent(a.Types()...)
+	return e.HasComponent(a.ComponentTypes()...)
 }
 
 func (a *AllMatcher) String() string {
-	return fmt.Sprintf("AllOf(%v)", print(a.Types()...))
+	return fmt.Sprintf("AllOf(%v)", print(a.ComponentTypes()...))
 }
 
 // AnyOf
 type AnyMatcher struct {
-	BaseMatcher
+	baseMatcher
 }
 
-func AnyOf(types ...Type) Matcher {
+func AnyOf(types ...ComponentType) Matcher {
 	b := newBaseMatcher(types...)
-	b.hash = Hash(anyHashFactor, b.Types()...)
+	b.hash = Hash(anyHashFactor, b.ComponentTypes()...)
 	return &AnyMatcher{b}
 }
 
 func (a *AnyMatcher) Matches(e Entity) bool {
-	return e.HasAnyComponent(a.Types()...)
+	return e.HasAnyComponent(a.ComponentTypes()...)
 }
 
 func (a *AnyMatcher) String() string {
-	return fmt.Sprintf("AnyOf(%v)", print(a.Types()...))
+	return fmt.Sprintf("AnyOf(%v)", print(a.ComponentTypes()...))
 }
 
 // NonoOf
 type NoneMatcher struct {
-	BaseMatcher
+	baseMatcher
 }
 
-func NoneOf(types ...Type) Matcher {
+func NoneOf(types ...ComponentType) Matcher {
 	b := newBaseMatcher(types...)
-	b.hash = Hash(noneHashFactor, b.Types()...)
+	b.hash = Hash(noneHashFactor, b.ComponentTypes()...)
 	return &NoneMatcher{b}
 }
 
 func (n *NoneMatcher) Matches(e Entity) bool {
-	return !e.HasAnyComponent(n.Types()...)
+	return !e.HasAnyComponent(n.ComponentTypes()...)
 }
 
 func (n *NoneMatcher) String() string {
-	return fmt.Sprintf("NonoOf(%v)", print(n.Types()...))
+	return fmt.Sprintf("NonoOf(%v)", print(n.ComponentTypes()...))
 }
 
 // Utilities
-func Hash(factor uint, types ...Type) uint {
+func Hash(factor uint, types ...ComponentType) uint {
 	var hash uint
 	for _, t := range types {
 		hash ^= uint(t) * componentHashFactor
@@ -135,6 +135,6 @@ func HashMatcher(matchers ...Matcher) uint {
 	return hash
 }
 
-func print(types ...Type) string {
+func print(types ...ComponentType) string {
 	return fmt.Sprintf("%v", types)
 }

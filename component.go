@@ -1,24 +1,24 @@
 package entitas
 
-type Type uint16
+type ComponentType uint16
 
-type Types []Type
+type ComponentTypes []ComponentType
 
-func (ts Types) Len() int {
+func (ts ComponentTypes) Len() int {
 	return len(ts)
 }
 
-func (ts Types) Less(i, j int) bool {
+func (ts ComponentTypes) Less(i, j int) bool {
 	return ts[i] < ts[j]
 }
 
-func (ts Types) Swap(i, j int) {
+func (ts ComponentTypes) Swap(i, j int) {
 	ts[i], ts[j] = ts[j], ts[i]
 }
 
 //
 type Component interface {
-	Type() Type
+	ComponentType() ComponentType
 }
 
 //
@@ -29,7 +29,7 @@ func (t Components) Len() int {
 }
 
 func (t Components) Less(i, j int) bool {
-	return t[i].Type() < t[j].Type()
+	return t[i].ComponentType() < t[j].ComponentType()
 }
 
 func (t Components) Swap(i, j int) {

@@ -1,11 +1,11 @@
 package entitas
 
-type GroupChanged func(Group, Entity, Component)
+type GroupChanged func(Group, Entity)
 
 type Group interface {
 	Entities() []Entity
-	HandleEntity(e Entity, c Component)
-	UpdateEntity(e Entity, c Component)
+	HandleEntity(e Entity)
+	UpdateEntity(e Entity)
 	Matches(e Entity) bool
 	ContainsEntity(e Entity) bool
 
@@ -14,7 +14,7 @@ type Group interface {
 }
 
 type group struct {
-	entities         map[uint64]Entity
+	entities         map[EntityID]Entity
 	cache            []Entity
 	cacheInvalidated bool
 	matchers         []Matcher
@@ -24,7 +24,7 @@ type group struct {
 
 func newGroup(matchers ...Matcher) Group {
 	return &group{
-		entities:     make(map[uint64]Entity),
+		entities:     make(map[EntityID]Entity),
 		matchers:     matchers,
 		groupChanged: make(map[EventType][]GroupChanged),
 	}
@@ -43,17 +43,17 @@ func (g *group) Entities() []Entity {
 	return cache
 }
 
-func (g *group) HandleEntity(e Entity, c Component) {
+func (g *group) HandleEntity(e Entity) {
 	if g.Matches(e) {
-		g.addEntity(e, c)
+		g.addEntity(e)
 	} else {
-		g.removeEntity(e, c)
+		g.removeEntity(e)
 	}
 }
 
-func (g *group) UpdateEntity(e Entity, c Component) {
+func (g *group) UpdateEntity(e Entity) {
 	if _, ok := g.entities[e.ID()]; ok {
-		g.onGroupChanged(EventUpdated, e, c)
+		g.onGroupChanged(EventUpdated, e)
 	}
 }
 
@@ -81,28 +81,28 @@ func (g *group) RemoveAllEvents() {
 }
 
 // private
-func (g *group) onGroupChanged(ev EventType, e Entity, c Component) {
+func (g *group) onGroupChanged(ev EventType, e Entity) {
 	if events, ok := g.groupChanged[ev]; ok {
 		for _, event := range events {
-			event(g, e, c)
+			event(g, e)
 		}
 	}
 }
 
-func (g *group) addEntity(e Entity, c Component) {
+func (g *group) addEntity(e Entity) {
 	if _, ok := g.entities[e.ID()]; !ok {
 		g.entities[e.ID()] = e
 		if g.cache != nil {
 			g.cache = append(g.cache, e)
 		}
-		g.onGroupChanged(EventAdded, e, c)
+		g.onGroupChanged(EventAdded, e)
 	}
 }
 
-func (g *group) removeEntity(e Entity, c Component) {
+func (g *group) removeEntity(e Entity) {
 	if _, ok := g.entities[e.ID()]; ok {
 		delete(g.entities, e.ID())
 		g.cache = nil
-		g.onGroupChanged(EventRemoved, e, c)
+		g.onGroupChanged(EventRemoved, e)
 	}
 }

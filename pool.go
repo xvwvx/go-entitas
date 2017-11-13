@@ -21,14 +21,14 @@ const (
 )
 
 type Pool interface {
-	CreateComponent(ts Type) Component
-	AddComponentNewFunc(ts Type, f ComponentNewFunc)
+	CreateComponent(ts ComponentType) Component
+	AddComponentNewFunc(ts ComponentType, f ComponentNewFunc)
 
 	CreateEntity(cs ...Component) Entity
 	Entities() []Entity
 	Count() int
 	HasEntity(e Entity) bool
-	DestroyEntity(e Entity)
+	destroyEntity(e Entity)
 	DestroyAllEntities()
 	Group(matcher ...Matcher) Group
 
@@ -37,13 +37,13 @@ type Pool interface {
 }
 
 type pool struct {
-	index       uint64
-	entities    map[uint64]Entity
+	index       EntityID
+	entities    map[EntityID]Entity
 	entitiesCache       []Entity
 	unused      []Entity
 
 	groups      map[uint]Group
-	groupsIndex map[Type][]Group
+	groupsIndex map[ComponentType][]Group
 
 	cacheComponents  [][]Component
 	componentNewFunc []ComponentNewFunc
@@ -52,15 +52,15 @@ type pool struct {
 	groupChanged []PoolGroupChanged
 }
 
-func NewPool(index uint64) Pool {
+func NewPool(index EntityID) Pool {
 	if TotalComponents == 0 {
 		panic("please set entitas.TotalComponents")
 	}
 	return &pool{
 		index:            index,
-		entities:         make(map[uint64]Entity),
+		entities:         make(map[EntityID]Entity),
 		groups:           make(map[uint]Group),
-		groupsIndex:      make(map[Type][]Group),
+		groupsIndex:      make(map[ComponentType][]Group),
 		unused:           make([]Entity, 0),
 		cacheComponents:  make([][]Component, TotalComponents),
 		componentNewFunc: make([]ComponentNewFunc, TotalComponents),
@@ -68,7 +68,7 @@ func NewPool(index uint64) Pool {
 	}
 }
 
-func (p *pool) CreateComponent(ts Type) (component Component) {
+func (p *pool) CreateComponent(ts ComponentType) (component Component) {
 	cache := p.cacheComponents[ts]
 	length := len(cache)
 	if length > 0 {
@@ -81,7 +81,7 @@ func (p *pool) CreateComponent(ts Type) (component Component) {
 	return
 }
 
-func (p *pool) AddComponentNewFunc(ts Type, f ComponentNewFunc) {
+func (p *pool) AddComponentNewFunc(ts ComponentType, f ComponentNewFunc) {
 	p.componentNewFunc[ts] = f
 }
 
@@ -94,7 +94,7 @@ func (p *pool) CreateEntity(cs ...Component) Entity {
 	}
 
 	for _, g := range p.groups {
-		g.HandleEntity(e, nil)
+		g.HandleEntity(e)
 	}
 	return e
 }
@@ -120,7 +120,7 @@ func (p *pool) HasEntity(e Entity) bool {
 	return exist && entity == e
 }
 
-func (p *pool) DestroyEntity(e Entity) {
+func (p *pool) destroyEntity(e Entity) {
 	if p.HasEntity(e) {
 		p.onEntityChanged(PoolEntityWillBeDestroyed, e)
 		e.RemoveAllComponents()
@@ -131,7 +131,7 @@ func (p *pool) DestroyEntity(e Entity) {
 
 		p.entitiesCache = nil
 		for _, g := range p.groups {
-			g.HandleEntity(e, nil)
+			g.HandleEntity(e)
 		}
 		p.unused = append(p.unused, e)
 	} else {
@@ -142,11 +142,10 @@ func (p *pool) DestroyEntity(e Entity) {
 func (p *pool) DestroyAllEntities() {
 	for _, e := range p.entities {
 		p.onEntityChanged(PoolEntityWillBeDestroyed, e)
-		e.RemoveAllComponents()
-		e.RemoveAllEvents()
+		e.internalDestroy()
 		p.onEntityChanged(PoolEntityDestroyed, e)
 	}
-	p.entities = make(map[uint64]Entity)
+	p.entities = make(map[EntityID]Entity)
 	p.entitiesCache = nil
 }
 
@@ -158,12 +157,12 @@ func (p *pool) Group(matchers ...Matcher) Group {
 
 	g := newGroup(matchers...)
 	for _, e := range p.entities {
-		g.HandleEntity(e, nil)
+		g.HandleEntity(e)
 	}
 	p.groups[hash] = g
 
 	for _, m := range matchers {
-		for _, t := range m.Types() {
+		for _, t := range m.ComponentTypes() {
 			p.groupsIndex[t] = append(p.groupsIndex[t], g)
 		}
 	}
@@ -203,26 +202,26 @@ func (p *pool) onGroupChanged(group Group) {
 
 func (p *pool) componentAdded(e Entity, c Component) {
 	p.forMatchingGroup(e, c, func(g Group) {
-		g.HandleEntity(e, c)
+		g.HandleEntity(e)
 	})
 }
 
 func (p *pool) componentUpdated(e Entity, c Component) {
 	p.forMatchingGroup(e, c, func(g Group) {
-		g.UpdateEntity(e, c)
+		g.UpdateEntity(e)
 	})
 }
 
 func (p *pool) componentRemoved(e Entity, c Component) {
-	p.cacheComponents[c.Type()] = append(p.cacheComponents[c.Type()], c)
+	p.cacheComponents[c.ComponentType()] = append(p.cacheComponents[c.ComponentType()], c)
 
 	p.forMatchingGroup(e, c, func(g Group) {
-		g.HandleEntity(e, c)
+		g.HandleEntity(e)
 	})
 }
 
 func (p *pool) getEntity() (entity Entity) {
-
+	
 	length := len(p.unused)
 	if length > 0 {
 		last := length - 1
@@ -244,7 +243,7 @@ func (p *pool) getEntity() (entity Entity) {
 
 func (p *pool) forMatchingGroup(e Entity, c Component, f func(g Group)) {
 	if p.HasEntity(e) {
-		for _, g := range p.groupsIndex[c.Type()] {
+		for _, g := range p.groupsIndex[c.ComponentType()] {
 			f(g)
 		}
 	}

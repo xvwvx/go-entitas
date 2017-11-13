@@ -20,7 +20,7 @@ func NewGroupObserver(group Group, event EventType) GroupObserver {
 		active:   true,
 	}
 
-	callback := func(group Group, entity Entity, component Component) {
+	callback := func(group Group, entity Entity) {
 		addEntity(observer, group, entity)
 	}
 

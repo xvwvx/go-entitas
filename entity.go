@@ -13,39 +13,42 @@ var (
 
 type EntityComponentChanged func(Entity, Component)
 
+type EntityID uint64
+
 type Entity interface {
-	ID() uint64
+	ID() EntityID
 
 	AddComponent(cs ...Component) error
 	UpdateComponent(cs ...Component)
-	RemoveComponent(ts ...Type) error
+	RemoveComponent(ts ...ComponentType) error
 	RemoveAllComponents()
 
-	HasComponent(ts ...Type) bool
-	HasAnyComponent(ts ...Type) bool
-	Component(t Type) (Component, error)
+	HasComponent(ts ...ComponentType) bool
+	HasAnyComponent(ts ...ComponentType) bool
+	Component(t ComponentType) (Component, error)
 	Components() []Component
-	ComponentTypes() []Type
+	ComponentTypes() []ComponentType
 
 	AddEvent(ev EventType, action EntityComponentChanged)
 	RemoveAllEvents()
 	HasEvents() bool
 
 	Destroy()
+	internalDestroy()
 }
 
 type entity struct {
-	id               uint64
+	id               EntityID
 	components       []Component
 	componentChanged map[EventType][]EntityComponentChanged
 
 	componentsCache     []Component
-	componentTypesCache []Type
+	componentTypesCache []ComponentType
 
 	pool Pool
 }
 
-func newEntity(pool Pool, id uint64) Entity {
+func newEntity(pool Pool, id EntityID) Entity {
 	return &entity{
 		id:               id,
 		components:       make([]Component, TotalComponents),
@@ -64,7 +67,7 @@ func (e *entity) onComponentChanged(ev EventType, c Component) {
 }
 
 //public
-func (e *entity) HasComponent(ts ...Type) bool {
+func (e *entity) HasComponent(ts ...ComponentType) bool {
 	for _, t := range ts {
 		if e.components[t] == nil {
 			return false
@@ -73,7 +76,7 @@ func (e *entity) HasComponent(ts ...Type) bool {
 	return true
 }
 
-func (e *entity) HasAnyComponent(ts ...Type) bool {
+func (e *entity) HasAnyComponent(ts ...ComponentType) bool {
 	for _, t := range ts {
 		if e.components[t] != nil {
 			return true
@@ -82,7 +85,7 @@ func (e *entity) HasAnyComponent(ts ...Type) bool {
 	return false
 }
 
-func (e *entity) Component(t Type) (Component, error) {
+func (e *entity) Component(t ComponentType) (Component, error) {
 	c := e.components[t]
 	if c == nil {
 		return nil, ErrComponentDoesNotExist
@@ -105,13 +108,13 @@ func (e *entity) Components() []Component {
 	return components
 }
 
-func (e *entity) ComponentTypes() []Type {
+func (e *entity) ComponentTypes() []ComponentType {
 	types := e.componentTypesCache
 	if types == nil {
-		types = make([]Type, 0, len(e.components))
+		types = make([]ComponentType, 0, len(e.components))
 		for t, c := range e.components {
 			if c != nil {
-				types = append(types, Type(t))
+				types = append(types, ComponentType(t))
 			}
 		}
 		e.componentTypesCache = types
@@ -121,10 +124,10 @@ func (e *entity) ComponentTypes() []Type {
 
 func (e *entity) AddComponent(cs ...Component) error {
 	for _, c := range cs {
-		if e.HasComponent(c.Type()) {
+		if e.HasComponent(c.ComponentType()) {
 			return ErrComponentExists
 		}
-		e.components[c.Type()] = c
+		e.components[c.ComponentType()] = c
 		e.onComponentChanged(EventAdded, c)
 	}
 
@@ -138,8 +141,8 @@ func (e *entity) AddComponent(cs ...Component) error {
 
 func (e *entity) UpdateComponent(cs ...Component) {
 	for _, c := range cs {
-		old := e.components[c.Type()]
-		e.components[c.Type()] = c
+		old := e.components[c.ComponentType()]
+		e.components[c.ComponentType()] = c
 		if old != nil {
 			if old != c {
 				e.onComponentChanged(EventRemoved, old)
@@ -156,7 +159,7 @@ func (e *entity) UpdateComponent(cs ...Component) {
 	}
 }
 
-func (e *entity) RemoveComponent(ts ...Type) error {
+func (e *entity) RemoveComponent(ts ...ComponentType) error {
 	for _, t := range ts {
 		c, err := e.Component(t)
 		if err != nil {
@@ -189,7 +192,7 @@ func (e *entity) RemoveAllComponents() {
 
 }
 
-func (e *entity) ID() uint64 {
+func (e *entity) ID() EntityID {
 	return e.id
 }
 
@@ -207,7 +210,12 @@ func (e *entity) RemoveAllEvents() {
 }
 
 func (e *entity) Destroy() {
-	e.pool.DestroyEntity(e)
+	e.pool.destroyEntity(e)
+}
+
+func (e *entity)internalDestroy()  {
+	e.RemoveAllComponents()
+	e.RemoveAllEvents()
 }
 
 func (e *entity) String() string {
