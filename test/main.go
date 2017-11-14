@@ -10,7 +10,7 @@ type Component1 struct {
 	AA int
 }
 
-func (c *Component1) ComponentType() entitas.ComponentType {
+func (c *Component1) Type() int {
 	return 1
 }
 
@@ -25,11 +25,11 @@ func main() {
 	pool := entitas.NewPool(0)
 	fmt.Println(pool)
 
-	matcher := entitas.AllOf(entitas.ComponentType(1))
+	matcher := entitas.AllOf(1)
 	group := pool.Group(matcher)
 	observer := entitas.NewGroupObserver(group, entitas.EventAddedOrRemoved)
 
-	pool.AddComponentNewFunc(1, NewC1)
+	pool.RegisterComponent(&Component1{})
 
 	c1 := pool.CreateComponent(1)
 	entity1 := pool.CreateEntity(c1)

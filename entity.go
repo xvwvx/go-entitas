@@ -3,7 +3,6 @@ package entitas
 import (
 	"errors"
 	"fmt"
-	"sort"
 )
 
 var (
@@ -20,14 +19,14 @@ type Entity interface {
 
 	AddComponent(cs ...Component) error
 	UpdateComponent(cs ...Component)
-	RemoveComponent(ts ...ComponentType) error
+	RemoveComponent(ts ...int) error
 	RemoveAllComponents()
 
-	HasComponent(ts ...ComponentType) bool
-	HasAnyComponent(ts ...ComponentType) bool
-	Component(t ComponentType) (Component, error)
+	HasComponent(ts ...int) bool
+	HasAnyComponent(ts ...int) bool
+	Component(t int) (Component, error)
 	Components() []Component
-	ComponentTypes() []ComponentType
+	ComponentTypes() []int
 
 	AddEvent(ev EventType, action EntityComponentChanged)
 	RemoveAllEvents()
@@ -43,7 +42,7 @@ type entity struct {
 	componentChanged map[EventType][]EntityComponentChanged
 
 	componentsCache     []Component
-	componentTypesCache []ComponentType
+	componentTypesCache []int
 
 	pool Pool
 }
@@ -67,7 +66,7 @@ func (e *entity) onComponentChanged(ev EventType, c Component) {
 }
 
 //public
-func (e *entity) HasComponent(ts ...ComponentType) bool {
+func (e *entity) HasComponent(ts ...int) bool {
 	for _, t := range ts {
 		if e.components[t] == nil {
 			return false
@@ -76,7 +75,7 @@ func (e *entity) HasComponent(ts ...ComponentType) bool {
 	return true
 }
 
-func (e *entity) HasAnyComponent(ts ...ComponentType) bool {
+func (e *entity) HasAnyComponent(ts ...int) bool {
 	for _, t := range ts {
 		if e.components[t] != nil {
 			return true
@@ -85,7 +84,7 @@ func (e *entity) HasAnyComponent(ts ...ComponentType) bool {
 	return false
 }
 
-func (e *entity) Component(t ComponentType) (Component, error) {
+func (e *entity) Component(t int) (Component, error) {
 	c := e.components[t]
 	if c == nil {
 		return nil, ErrComponentDoesNotExist
@@ -102,19 +101,18 @@ func (e *entity) Components() []Component {
 			components = append(components, c)
 		}
 
-		sort.Sort(Components(components))
 		e.componentsCache = components
 	}
 	return components
 }
 
-func (e *entity) ComponentTypes() []ComponentType {
+func (e *entity) ComponentTypes() []int {
 	types := e.componentTypesCache
 	if types == nil {
-		types = make([]ComponentType, 0, len(e.components))
+		types = make([]int, 0, len(e.components))
 		for t, c := range e.components {
 			if c != nil {
-				types = append(types, ComponentType(t))
+				types = append(types, int(t))
 			}
 		}
 		e.componentTypesCache = types
@@ -124,10 +122,11 @@ func (e *entity) ComponentTypes() []ComponentType {
 
 func (e *entity) AddComponent(cs ...Component) error {
 	for _, c := range cs {
-		if e.HasComponent(c.ComponentType()) {
+		t := c.Type()
+		if e.HasComponent(t) {
 			return ErrComponentExists
 		}
-		e.components[c.ComponentType()] = c
+		e.components[t] = c
 		e.onComponentChanged(EventAdded, c)
 	}
 
@@ -141,8 +140,9 @@ func (e *entity) AddComponent(cs ...Component) error {
 
 func (e *entity) UpdateComponent(cs ...Component) {
 	for _, c := range cs {
-		old := e.components[c.ComponentType()]
-		e.components[c.ComponentType()] = c
+		t := c.Type()
+		old := e.components[t]
+		e.components[t] = c
 		if old != nil {
 			if old != c {
 				e.onComponentChanged(EventRemoved, old)
@@ -159,7 +159,7 @@ func (e *entity) UpdateComponent(cs ...Component) {
 	}
 }
 
-func (e *entity) RemoveComponent(ts ...ComponentType) error {
+func (e *entity) RemoveComponent(ts ...int) error {
 	for _, t := range ts {
 		c, err := e.Component(t)
 		if err != nil {
@@ -213,7 +213,7 @@ func (e *entity) Destroy() {
 	e.pool.destroyEntity(e)
 }
 
-func (e *entity)internalDestroy()  {
+func (e *entity) internalDestroy() {
 	e.RemoveAllComponents()
 	e.RemoveAllEvents()
 }

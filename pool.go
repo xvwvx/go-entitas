@@ -1,6 +1,9 @@
 package entitas
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 var (
 	TotalComponents int
@@ -21,8 +24,8 @@ const (
 )
 
 type Pool interface {
-	CreateComponent(ts ComponentType) Component
-	AddComponentNewFunc(ts ComponentType, f ComponentNewFunc)
+	CreateComponent(ts int) Component
+	RegisterComponent(component Component)
 
 	CreateEntity(cs ...Component) Entity
 	Entities() []Entity
@@ -37,19 +40,19 @@ type Pool interface {
 }
 
 type pool struct {
-	index       EntityID
-	entities    map[EntityID]Entity
-	entitiesCache       []Entity
-	unused      []Entity
+	index         EntityID
+	entities      map[EntityID]Entity
+	entitiesCache []Entity
+	unused        []Entity
 
 	groups      map[uint]Group
-	groupsIndex map[ComponentType][]Group
+	groupsIndex map[int][]Group
 
-	cacheComponents  [][]Component
-	componentNewFunc []ComponentNewFunc
+	cacheComponents   [][]Component
+	registerComponent []reflect.Type
 
 	entityChanged map[PoolEntityEvent][]PoolEntityChanged
-	groupChanged []PoolGroupChanged
+	groupChanged  []PoolGroupChanged
 }
 
 func NewPool(index EntityID) Pool {
@@ -57,18 +60,18 @@ func NewPool(index EntityID) Pool {
 		panic("please set entitas.TotalComponents")
 	}
 	return &pool{
-		index:            index,
-		entities:         make(map[EntityID]Entity),
-		groups:           make(map[uint]Group),
-		groupsIndex:      make(map[ComponentType][]Group),
-		unused:           make([]Entity, 0),
-		cacheComponents:  make([][]Component, TotalComponents),
-		componentNewFunc: make([]ComponentNewFunc, TotalComponents),
-		entityChanged:    make(map[PoolEntityEvent][]PoolEntityChanged),
+		index:             index,
+		entities:          make(map[EntityID]Entity),
+		groups:            make(map[uint]Group),
+		groupsIndex:       make(map[int][]Group),
+		unused:            make([]Entity, 0),
+		cacheComponents:   make([][]Component, TotalComponents),
+		registerComponent: make([]reflect.Type, TotalComponents),
+		entityChanged:     make(map[PoolEntityEvent][]PoolEntityChanged),
 	}
 }
 
-func (p *pool) CreateComponent(ts ComponentType) (component Component) {
+func (p *pool) CreateComponent(ts int) (component Component) {
 	cache := p.cacheComponents[ts]
 	length := len(cache)
 	if length > 0 {
@@ -76,13 +79,14 @@ func (p *pool) CreateComponent(ts ComponentType) (component Component) {
 		component = cache[last]
 		p.cacheComponents[ts] = cache[:last]
 	} else {
-		component = p.componentNewFunc[ts]()
+		value := reflect.New(p.registerComponent[ts])
+		component = value.Interface().(Component)
 	}
 	return
 }
 
-func (p *pool) AddComponentNewFunc(ts ComponentType, f ComponentNewFunc) {
-	p.componentNewFunc[ts] = f
+func (p *pool) RegisterComponent(component Component) {
+	p.registerComponent[component.Type()] = reflect.TypeOf(component).Elem()
 }
 
 func (p *pool) CreateEntity(cs ...Component) Entity {
@@ -177,7 +181,7 @@ func (p *pool) AddEvent(event PoolEntityEvent, action PoolEntityChanged) {
 	p.entityChanged[event] = append(actions, action)
 }
 
-func (p *pool) AddGroupCreatedEvent(changed PoolGroupChanged){
+func (p *pool) AddGroupCreatedEvent(changed PoolGroupChanged) {
 
 }
 
@@ -213,7 +217,8 @@ func (p *pool) componentUpdated(e Entity, c Component) {
 }
 
 func (p *pool) componentRemoved(e Entity, c Component) {
-	p.cacheComponents[c.ComponentType()] = append(p.cacheComponents[c.ComponentType()], c)
+	t := c.Type()
+	p.cacheComponents[t] = append(p.cacheComponents[t], c)
 
 	p.forMatchingGroup(e, c, func(g Group) {
 		g.HandleEntity(e)
@@ -221,7 +226,7 @@ func (p *pool) componentRemoved(e Entity, c Component) {
 }
 
 func (p *pool) getEntity() (entity Entity) {
-	
+
 	length := len(p.unused)
 	if length > 0 {
 		last := length - 1
@@ -243,7 +248,7 @@ func (p *pool) getEntity() (entity Entity) {
 
 func (p *pool) forMatchingGroup(e Entity, c Component, f func(g Group)) {
 	if p.HasEntity(e) {
-		for _, g := range p.groupsIndex[c.ComponentType()] {
+		for _, g := range p.groupsIndex[c.Type()] {
 			f(g)
 		}
 	}

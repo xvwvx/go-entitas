@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	ComponentA ComponentType = iota
+	ComponentA int = iota
 	ComponentB
 	ComponentC
 	ComponentD
@@ -26,7 +26,7 @@ func NewComponentA(value int) Component {
 	return &componentA{value}
 }
 
-func (c1 *componentA) ComponentType() ComponentType {
+func (c1 *componentA) int() int {
 	return ComponentA
 }
 
@@ -44,7 +44,7 @@ func NewComponentB(value float32) Component {
 	return &componentB{value}
 }
 
-func (c1 *componentB) ComponentType() ComponentType {
+func (c1 *componentB) int() int {
 	return ComponentB
 }
 
@@ -61,7 +61,7 @@ func NewComponentC() Component {
 	return &componentC{}
 }
 
-func (c1 *componentC) ComponentType() ComponentType {
+func (c1 *componentC) int() int {
 	return ComponentC
 }
 
@@ -78,7 +78,7 @@ func NewComponentD() Component {
 	return &componentC{}
 }
 
-func (c1 *componentD) ComponentType() ComponentType {
+func (c1 *componentD) int() int {
 	return ComponentD
 }
 
@@ -95,7 +95,7 @@ func NewComponentE() Component {
 	return &componentE{}
 }
 
-func (c1 *componentE) ComponentType() ComponentType {
+func (c1 *componentE) int() int {
 	return ComponentE
 }
 
@@ -112,7 +112,7 @@ func NewComponentF() Component {
 	return &componentF{}
 }
 
-func (c1 *componentF) ComponentType() ComponentType {
+func (c1 *componentF) int() int {
 	return ComponentF
 }
 

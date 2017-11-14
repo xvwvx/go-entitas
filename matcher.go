@@ -17,28 +17,28 @@ const (
 type Matcher interface {
 	Matches(entity Entity) bool
 	Hash() uint
-	ComponentTypes() []ComponentType
+	ComponentTypes() []int
 	Equals(m Matcher) bool
 	String() string
 }
 
 // baseMatcher
 type baseMatcher struct {
-	types []ComponentType
+	types []int
 	hash  uint
 }
 
-func newBaseMatcher(types ...ComponentType) baseMatcher {
-	mtype := make(map[ComponentType]bool)
+func newBaseMatcher(types ...int) baseMatcher {
+	mtype := make(map[int]bool)
 	for _, t := range types {
 		mtype[t] = true
 	}
 
-	types = make([]ComponentType, 0, len(mtype))
+	types = make([]int, 0, len(mtype))
 	for t := range mtype {
 		types = append(types, t)
 	}
-	sort.Sort(ComponentTypes(types))
+	sort.IntsAreSorted(types)
 
 	return baseMatcher{types: types}
 }
@@ -47,7 +47,7 @@ func (b *baseMatcher) Hash() uint {
 	return b.hash
 }
 
-func (b *baseMatcher) ComponentTypes() []ComponentType {
+func (b *baseMatcher) ComponentTypes() []int {
 	return b.types
 }
 
@@ -56,7 +56,7 @@ type AllMatcher struct {
 	baseMatcher
 }
 
-func AllOf(types ...ComponentType) Matcher {
+func AllOf(types ...int) Matcher {
 	b := newBaseMatcher(types...)
 	b.hash = Hash(allHashFactor, b.ComponentTypes()...)
 	return &AllMatcher{b}
@@ -79,7 +79,7 @@ type AnyMatcher struct {
 	baseMatcher
 }
 
-func AnyOf(types ...ComponentType) Matcher {
+func AnyOf(types ...int) Matcher {
 	b := newBaseMatcher(types...)
 	b.hash = Hash(anyHashFactor, b.ComponentTypes()...)
 	return &AnyMatcher{b}
@@ -102,7 +102,7 @@ type NoneMatcher struct {
 	baseMatcher
 }
 
-func NoneOf(types ...ComponentType) Matcher {
+func NoneOf(types ...int) Matcher {
 	b := newBaseMatcher(types...)
 	b.hash = Hash(noneHashFactor, b.ComponentTypes()...)
 	return &NoneMatcher{b}
@@ -121,7 +121,7 @@ func (n *NoneMatcher) Equals(m Matcher) bool {
 }
 
 // Utilities
-func Hash(factor uint, types ...ComponentType) uint {
+func Hash(factor uint, types ...int) uint {
 	var hash uint
 	for _, t := range types {
 		hash ^= uint(t) * componentHashFactor
@@ -143,6 +143,6 @@ func HashMatcher(matchers ...Matcher) uint {
 	return hash
 }
 
-func print(types ...ComponentType) string {
+func print(types ...int) string {
 	return fmt.Sprintf("%v", types)
 }
