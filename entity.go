@@ -17,6 +17,7 @@ type EntityID uint64
 type Entity interface {
 	ID() EntityID
 
+	CreateComponent(ts int) Component
 	AddComponent(cs ...Component) error
 	UpdateComponent(cs ...Component)
 	RemoveComponent(ts ...int) error
@@ -66,6 +67,10 @@ func (e *entity) onComponentChanged(ev EventType, c Component) {
 }
 
 //public
+func (e *entity)CreateComponent(ts int) Component {
+	return e.pool.CreateComponent(ts)
+}
+
 func (e *entity) HasComponent(ts ...int) bool {
 	for _, t := range ts {
 		if e.components[t] == nil {
