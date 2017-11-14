@@ -51,10 +51,6 @@ func (b *baseMatcher) ComponentTypes() []ComponentType {
 	return b.types
 }
 
-func (a *baseMatcher) Equals(m Matcher) bool {
-	return reflect.DeepEqual(a.ComponentTypes(), m.ComponentTypes())
-}
-
 // AllOf
 type AllMatcher struct {
 	baseMatcher
@@ -72,6 +68,10 @@ func (a *AllMatcher) Matches(e Entity) bool {
 
 func (a *AllMatcher) String() string {
 	return fmt.Sprintf("AllOf(%v)", print(a.ComponentTypes()...))
+}
+
+func (a *baseMatcher) Equals(m Matcher) bool {
+	return reflect.DeepEqual(a, m)
 }
 
 // AnyOf
@@ -93,6 +93,10 @@ func (a *AnyMatcher) String() string {
 	return fmt.Sprintf("AnyOf(%v)", print(a.ComponentTypes()...))
 }
 
+func (a *AnyMatcher) Equals(m Matcher) bool {
+	return reflect.DeepEqual(a, m)
+}
+
 // NonoOf
 type NoneMatcher struct {
 	baseMatcher
@@ -110,6 +114,10 @@ func (n *NoneMatcher) Matches(e Entity) bool {
 
 func (n *NoneMatcher) String() string {
 	return fmt.Sprintf("NonoOf(%v)", print(n.ComponentTypes()...))
+}
+
+func (n *NoneMatcher) Equals(m Matcher) bool {
+	return reflect.DeepEqual(n, m)
 }
 
 // Utilities
