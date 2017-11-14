@@ -79,14 +79,10 @@ func (p *pool) CreateComponent(ts int) (component Component) {
 		component = cache[last]
 		p.cacheComponents[ts] = cache[:last]
 	} else {
-		component = p.createComponent(ts)
+		value := reflect.New(p.registerComponent[ts])
+		component = value.Interface().(Component)
 	}
 	return
-}
-
-func (p *pool) createComponent(ts int) Component {
-	value := reflect.New(p.registerComponent[ts])
-	return value.Interface().(Component)
 }
 
 func (p *pool) RegisterComponent(component Component) {
