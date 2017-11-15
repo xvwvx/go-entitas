@@ -22,19 +22,19 @@ func main() {
 	fmt.Println(math.MaxUint32 / 30000)
 
 	entitas.TotalComponents = 99
-	pool := entitas.NewPool(0)
-	fmt.Println(pool)
+	context := entitas.NewContext(0)
+	fmt.Println(context)
 
 	matcher := entitas.AllOf(1)
-	group := pool.Group(matcher)
+	group := context.Group(matcher)
 	observer := entitas.NewGroupObserver(group, entitas.EventAddedOrRemoved)
 
-	pool.RegisterComponent(&Component1{})
+	context.RegisterComponent(&Component1{})
 
-	c1 := pool.CreateComponent(1)
-	entity1 := pool.CreateEntity(c1)
+	c1 := context.CreateComponent(1)
+	entity1 := context.CreateEntity(c1)
 	fmt.Println(entity1)
-	fmt.Println(pool)
+	fmt.Println(context)
 
 	c, err := entity1.Component(1)
 	if err == nil {
@@ -43,7 +43,7 @@ func main() {
 	}
 	fmt.Println(observer.CollectedEntities(), len(observer.CollectedEntities()))
 
-	entity2 := pool.CreateEntity()
+	entity2 := context.CreateEntity()
 	fmt.Println(entity2)
 
 	fmt.Println(observer.CollectedEntities(), len(observer.CollectedEntities()))

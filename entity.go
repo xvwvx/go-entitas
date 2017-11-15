@@ -45,15 +45,15 @@ type entity struct {
 	componentsCache     []Component
 	componentTypesCache []int
 
-	pool Pool
+	context Context
 }
 
-func newEntity(pool Pool, id EntityID) Entity {
+func newEntity(context Context, id EntityID) Entity {
 	return &entity{
 		id:               id,
 		components:       make([]Component, TotalComponents),
 		componentChanged: make(map[EventType][]EntityComponentChanged),
-		pool:             pool,
+		context:          context,
 	}
 }
 
@@ -67,8 +67,8 @@ func (e *entity) onComponentChanged(ev EventType, c Component) {
 }
 
 //public
-func (e *entity)CreateComponent(ts int) Component {
-	return e.pool.CreateComponent(ts)
+func (e *entity) CreateComponent(ts int) Component {
+	return e.context.CreateComponent(ts)
 }
 
 func (e *entity) HasComponent(ts ...int) bool {
@@ -215,7 +215,7 @@ func (e *entity) RemoveAllEvents() {
 }
 
 func (e *entity) Destroy() {
-	e.pool.destroyEntity(e)
+	e.context.destroyEntity(e)
 }
 
 func (e *entity) internalDestroy() {
